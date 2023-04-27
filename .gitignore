@@ -1,0 +1,7 @@
+# INTELLIJ
+*.iml
+.idea
+
+# BUILDS
+motorshop-cdk/.build
+motorshop-order-lambda/target
