@@ -5,3 +5,4 @@
 # BUILDS
 motorshop-cdk/.build
 motorshop-order-lambda/target
+motorshop-create-prospect-lambda/target

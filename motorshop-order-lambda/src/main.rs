@@ -1,22 +1,53 @@
-use lambda_runtime::{Error, LambdaEvent, service_fn};
-use serde_json::{json, Value};
+use lambda_http::{Body, Error, Request, RequestExt, Response, run, service_fn};
+use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    let func = service_fn(func);
-    lambda_runtime::run(func).await?;
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::INFO)
+        // disable printing the name of the module in every log line.
+        .with_target(false)
+        // this needs to be set to false, otherwise ANSI color codes will
+        // show up in a confusing manner in CloudWatch logs.
+        .with_ansi(false)
+        // disabling time is handy because CloudWatch will add the ingestion time.
+        .without_time()
+        .init();
+
+    run(service_fn(function_handler)).await;
     Ok(())
 }
 
-async fn func(event: LambdaEvent<Value>) -> Result<Value, Error> {
-    let (event, ctx) = event.into_parts();
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub struct Item {
+    pub name: String,
+}
 
-    let name = event["body"]["name"].as_str().unwrap_or("unknown").to_uppercase();
+#[tracing::instrument(skip(event), fields(req_id = % event.lambda_context().request_id))]
+async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
+    let body = event.body();
+    let s = std::str::from_utf8(body).expect("invalid utf-8 sequence");
 
-    Ok(json!({
-        "isBase64Encoded": false,
-        "statusCode": 200,
-        "headers": {"REQUEST_ID" : ctx.request_id},
-        "body": format!("{}", name)
-    }))
+    //Log into Cloudwatch
+    info!(payload = %s, "JSON Payload received");
+
+    // Deserialize
+    let item = match serde_json::from_str::<Item>(s) {
+        Ok(item) => item,
+        Err(err) => {
+            let resp = Response::builder()
+                .status(400)
+                .header("content-type", "text/html")
+                .body(err.to_string().into())
+                .map_err(Box::new)?;
+            return Ok(resp);
+        }
+    };
+
+    let resp = Response::builder()
+        .status(200)
+        .header("content-type", "text/html")
+        .body(format!("{}", item.name.to_uppercase()).into())
+        .map_err(Box::new)?;
+    Ok(resp)
 }

@@ -1,7 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
+import {RemovalPolicy} from 'aws-cdk-lib';
 import {Construct} from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3'
-import {RemovalPolicy} from "aws-cdk-lib/core";
 import {RustFunction} from "rust.aws-cdk-lambda";
 import {EndpointType, LambdaRestApi} from "aws-cdk-lib/aws-apigateway";
 
@@ -16,14 +16,21 @@ export class MotorshopCdkStack extends cdk.Stack {
                 autoDeleteObjects: true,
             });
 
-        let orderLambda = new RustFunction(factory, 'motorshop-order-lambda', {
-            functionName: 'motorshop-order-lambda',
-            directory: '../motorshop-order-lambda/',
+        let createProspectLambda = new RustFunction(factory, 'motorshop-create-prospect-lambda', {
+            functionName: 'motorshop-create-prospect-lambda',
+            directory: '../motorshop-create-prospect-lambda/',
             memorySize: 128,
             setupLogging: true,
             environment: {
                 BUCKET_NAME: bucket.bucketName,
             },
+        });
+
+        let orderLambda = new RustFunction(factory, 'motorshop-order-lambda', {
+            functionName: 'motorshop-order-lambda',
+            directory: '../motorshop-order-lambda/',
+            memorySize: 128,
+            setupLogging: true,
         });
 
         /** Level 3 not for RUST **/
@@ -33,6 +40,18 @@ export class MotorshopCdkStack extends cdk.Stack {
             restApiName: 'motorshop-order-lambda-api',
             endpointConfiguration: {types: [EndpointType.REGIONAL]},
         });
+
+        // AUTHORISATIONS
+        // @ts-ignore
+        const grant = bucket.grantReadWrite(createProspectLambda);
+        /**
+         const custom = new CustomResource(factory, 'bindstone-motorshop-auth-bucket-rw',{
+            serviceToken: service_token,
+            removalPolicy: RemovalPolicy.DESTROY
+
+        });
+         custom.node.addDependency(grant);
+         **/
 
         const shop = new Construct(this, "shop");
 
