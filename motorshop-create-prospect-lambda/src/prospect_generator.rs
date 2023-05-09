@@ -4,13 +4,9 @@ use std::io::BufWriter;
 use printpdf::*;
 use tracing::info;
 
-const FONT_BYTES: &[u8] = include_bytes!("../fonts/CastoroTitling-Regular.ttf");
+use motorshop_domain::prospect::Prospect;
 
-#[derive(Clone)]
-pub struct Prospect {
-    pub(crate) name: String,
-    pub(crate) model: String,
-}
+const FONT_BYTES: &[u8] = include_bytes!("../fonts/CastoroTitling-Regular.ttf");
 
 pub fn generate_prospect(prospect: Prospect) -> String {
     info!("generate prospect...");

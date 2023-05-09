@@ -1,4 +1,16 @@
-POST https://793hywytml.execute-api.eu-west-1.amazonaws.com/prod/
+### PUBLISH
+
+POST https://ytrbzyi6bl.execute-api.eu-west-1.amazonaws.com/prod/
+Content-Type: application/json
+
+{
+  "name": "Peppo",
+  "model": "V1 Turbo"
+}
+
+### ORDER
+
+POST https://b387ujupn5.execute-api.eu-west-1.amazonaws.com/prod/
 Content-Type: application/json
 
 {

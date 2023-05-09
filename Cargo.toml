@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "motorshop-create-prospect-lambda",
+    "motorshop-order-lambda",
+    "motorshop-publish-model-lambda",
+]

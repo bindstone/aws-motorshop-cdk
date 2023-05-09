@@ -1,5 +1,11 @@
+use std::env;
+
 use lambda_http::{Body, Error, Request, RequestExt, Response, run, service_fn};
+use rusoto_core::{Region};
+use rusoto_sns::{PublishInput, Sns, SnsClient};
 use tracing::info;
+
+use motorshop_domain::prospect::Prospect;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -19,21 +25,26 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
-pub struct Item {
-    pub name: String,
-}
-
 #[tracing::instrument(skip(event), fields(req_id = % event.lambda_context().request_id))]
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
+    let sns_topic_arn = match env::var_os("SNS_TOPIC_ARN") {
+        Some(v) => v.into_string().unwrap(),
+        None => panic!("SNS_TOPIC_ARN is not set")
+    };
+
+    let sns_topic_name = match env::var_os("SNS_TOPIC_NAME") {
+        Some(v) => v.into_string().unwrap(),
+        None => panic!("SNS_TOPIC_NAME is not set")
+    };
+
     let body = event.body();
-    let s = std::str::from_utf8(body).expect("invalid utf-8 sequence");
+    let prospect_string = std::str::from_utf8(body).expect("invalid utf-8 sequence");
 
     //Log into Cloudwatch
-    info!(payload = %s, "JSON Payload received");
+    info!(payload = ?prospect_string, "JSON Payload received");
 
     // Deserialize
-    let item = match serde_json::from_str::<Item>(s) {
+    let prospect = match serde_json::from_str::<Prospect>(prospect_string) {
         Ok(item) => item,
         Err(err) => {
             let resp = Response::builder()
@@ -45,10 +56,26 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
         }
     };
 
-    let resp = Response::builder()
+    let send_message = serde_json::to_string(&prospect).unwrap();
+    info!(send_message = ?send_message, "Send Prospect to SNS");
+
+    let publish_input = PublishInput {
+        message: send_message,
+        topic_arn: Option::from(sns_topic_arn),
+        ..Default::default()
+    };
+
+    // Publish the message to the SNS topic
+    let region = Region::default();
+    let sns_client = SnsClient::new(region);
+
+    let result = sns_client.publish(publish_input).await?;
+    info!(result = ?result, "SQS Response");
+
+    let http_response = Response::builder()
         .status(200)
         .header("content-type", "text/html")
-        .body(format!("{}", item.name.to_uppercase()).into())
+        .body(format!("Message put in {}", sns_topic_name).into())
         .map_err(Box::new)?;
-    Ok(resp)
+    Ok(http_response)
 }

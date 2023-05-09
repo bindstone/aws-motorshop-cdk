@@ -22,7 +22,7 @@
   "dependencies": {
     "aws-cdk-lib": "2.76.0",
     "constructs": "^10.0.0",
-    "rust.aws-cdk-lambda": "^1.1.3",
+    "rust.aws-cdk-lambda": "^1.2.1",
     "source-map-support": "^0.5.21"
   }
 }

@@ -2,58 +2,36 @@ use std::env;
 use std::fs::File;
 use std::io::Read;
 
-use lambda_runtime::{Error, LambdaEvent, service_fn};
+use aws_lambda_events::sqs::{SqsBatchResponse, SqsEventObj};
+use lambda_runtime::{Error, LambdaEvent, run, service_fn};
 use rusoto_core::{Region, RusotoError};
 use rusoto_s3::{PutObjectRequest, S3, S3Client};
-use serde::{Deserialize, Serialize};
 use tracing::info;
 
-use crate::prospect_generator::{generate_prospect, Prospect};
+use motorshop_domain::prospect::Prospect;
+
+use crate::prospect_generator::generate_prospect;
 
 mod prospect_generator;
 
-#[derive(Deserialize)]
-struct Request {
-    command: String,
-}
-
-#[derive(Serialize)]
-struct Response {
-    req_id: String,
-    msg: String,
-}
-
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    info!("start...");
-    // required to enable CloudWatch error logging by the runtime
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::INFO)
         // disable printing the name of the module in every log line.
         .with_target(false)
-        // this needs to be set to false, otherwise ANSI color codes will
-        // show up in a confusing manner in CloudWatch logs.
-        .with_ansi(false)
         // disabling time is handy because CloudWatch will add the ingestion time.
         .without_time()
         .init();
 
-    let func = service_fn(my_handler);
-    lambda_runtime::run(func).await?;
-    Ok(())
+    run(service_fn(function_handler)).await
 }
 
-pub(crate) async fn my_handler(event: LambdaEvent<Request>) -> Result<Response, Error> {
-    // extract some useful info from the request
-    let command = event.payload.command;
+async fn function_handler(sqs_event: LambdaEvent<SqsEventObj<Prospect>>) -> Result<SqsBatchResponse, Error> {
+    info!("{:?}", sqs_event);
 
-    // prepare the response
-    let resp = Response {
-        req_id: event.context.request_id,
-        msg: format!("Command {} executed.", command),
-    };
+    let prospect = &sqs_event.payload.records[0].body;
 
-    let mut prospect = Prospect { name: "Duffy".parse().unwrap(), model: "Supra".parse().unwrap() };
     let doc_name = generate_prospect(prospect.clone());
 
     let bucket_name = match env::var_os("BUCKET_NAME") {
@@ -81,12 +59,14 @@ pub(crate) async fn my_handler(event: LambdaEvent<Request>) -> Result<Response, 
 
     match s3_client.put_object(put_request).await {
         Ok(_) => {
-            println!("File uploaded successfully to S3 bucket");
+            info!(doc_name = ?doc_name, "File uploaded successfully to S3 bucket");
             Ok(())
         }
         Err(err) => Err(Box::new(RusotoError::from(err))),
     }.expect("TODO: panic message");
 
     // return `Response` (it will be serialized to JSON automatically by the runtime)
+    let resp: SqsBatchResponse = serde_json::from_str("ok").unwrap();
+
     Ok(resp)
 }
