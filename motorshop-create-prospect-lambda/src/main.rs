@@ -28,16 +28,14 @@ async fn main() -> Result<(), Error> {
 }
 
 async fn function_handler(sqs_event: LambdaEvent<SqsEventObj<Prospect>>) -> Result<SqsBatchResponse, Error> {
-    info!("{:?}", sqs_event);
-
-    let prospect = &sqs_event.payload.records[0].body;
-
-    let doc_name = generate_prospect(prospect.clone());
 
     let bucket_name = match env::var_os("BUCKET_NAME") {
         Some(v) => v.into_string().unwrap(),
         None => panic!("$BUCKET_NAME is not set")
     };
+
+    let prospect = &sqs_event.payload.records[0].body;
+    let doc_name = generate_prospect(prospect.clone());
 
     let fname = format!("{}-{}.pdf", prospect.name, prospect.model);
 

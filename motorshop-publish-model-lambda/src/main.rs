@@ -1,4 +1,7 @@
 use std::env;
+use aws_sdk_dynamodb::{
+    types::AttributeValue, Client
+};
 
 use lambda_http::{Body, Error, Request, RequestExt, Response, run, service_fn};
 use rusoto_core::{Region};
@@ -37,6 +40,11 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
         None => panic!("SNS_TOPIC_NAME is not set")
     };
 
+    let dynamo_table = match env::var_os("DYNAMO_TABLE") {
+        Some(v) => v.into_string().unwrap(),
+        None => panic!("DYNAMO_TABLE is not set")
+    };
+
     let body = event.body();
     let prospect_string = std::str::from_utf8(body).expect("invalid utf-8 sequence");
 
@@ -55,6 +63,21 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
             return Ok(resp);
         }
     };
+
+    // Store DB
+    let config = aws_config::load_from_env().await;
+    let client = Client::new(&config);
+
+    let request = client
+        .put_item()
+        .table_name(dynamo_table)
+        .item("table_key", AttributeValue::S(String::from("catalog".to_string())))
+        .item("data_key", AttributeValue::S(prospect.name.clone()))
+        .item("name", AttributeValue::S(prospect.name.clone()))
+        .item("model", AttributeValue::S(prospect.model.clone()));
+    request.send().await?;
+
+    // SEND SNS Message
 
     let send_message = serde_json::to_string(&prospect).unwrap();
     info!(send_message = ?send_message, "Send Prospect to SNS");

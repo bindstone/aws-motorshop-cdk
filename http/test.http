@@ -1,6 +1,6 @@
 ### PUBLISH
 
-POST https://ytrbzyi6bl.execute-api.eu-west-1.amazonaws.com/prod/
+POST https://jir9df2q5a.execute-api.eu-west-1.amazonaws.com/prod/
 Content-Type: application/json
 
 {
