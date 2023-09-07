@@ -17,7 +17,10 @@ pub fn generate_prospect(prospect: Prospect) -> String {
     let current_layer = doc.get_page(page1).get_layer(layer1);
 
     let font = doc.add_external_font(FONT_BYTES).unwrap();
-    current_layer.use_text(format!("MODEL:{}", prospect.model), 24.0, Mm(20.0), Mm(50.0), &font);
+    current_layer.use_text(format!("PROSPECT"), 24.0, Mm(20.0), Mm(70.0), &font);
+    current_layer.use_text(format!("------------------------------------------------"), 24.0, Mm(20.0), Mm(60.0), &font);
+    current_layer.use_text(format!("BIKE:         {}", prospect.name), 24.0, Mm(20.0), Mm(30.0), &font);
+    current_layer.use_text(format!("MODEL:    {}", prospect.model), 24.0, Mm(20.0), Mm(20.0), &font);
 
     let doc_name = format!("/tmp/{}-{}.pdf", prospect.name, prospect.model);
     doc.save(&mut BufWriter::new(File::create(doc_name).unwrap())).unwrap();

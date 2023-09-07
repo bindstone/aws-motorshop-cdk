@@ -1,6 +1,6 @@
 ### PUBLISH
 
-POST https://jir9df2q5a.execute-api.eu-west-1.amazonaws.com/prod/
+POST https://a4in4zb6xb.execute-api.eu-west-1.amazonaws.com/prod/
 Content-Type: application/json
 
 {
@@ -10,7 +10,7 @@ Content-Type: application/json
 
 ### ORDER
 
-POST https://b387ujupn5.execute-api.eu-west-1.amazonaws.com/prod/
+POST https://b9h5pf48nl.execute-api.eu-west-1.amazonaws.com/prod/
 Content-Type: application/json
 
 {

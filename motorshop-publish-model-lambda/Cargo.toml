@@ -6,8 +6,8 @@ edition = "2021"
 [dependencies]
 openssl = { version = "0.10", features = ["vendored"] }
 lambda_runtime = "0.8.0"
-aws-config = "0.55.1"
-aws-sdk-dynamodb = "0.27.0"
+aws-config = "0.56.0"
+aws-sdk-dynamodb = "0.29.0"
 lambda_http = "0.8.0"
 serde_json = "1.0.66"
 rusoto_core = "0.48.0"
